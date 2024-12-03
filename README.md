@@ -5,11 +5,11 @@
 </p>
 
 ## About
-WeaveVM Archiver is an ETL archive pipeline for EVM networks. It's the simplest way to interface with WeaveVM's permanent data feature without smart contract redeployments.
+Substrate Archiver is an ETL archive pipeline for [Substrate](https://substrate.io/) networks. It's the simplest way to interface with WeaveVM's permanent data feature without smart contract redeployments. Check [WeaveVM Archiver](https://github.com/weaveVM/wvm-archiver) for EVM networks archive pipeline.
 
 ### WeaveVM Archiver Usage
 
-WeaveVM Archiver is the ideal choice if you want to:
+Substrate Archiver is the ideal choice if you want to:
 
 - Interface with WeaveVM's permanent data settlement and high-throughput DA
 - Maintain your current data settlement or DA architecture
@@ -19,16 +19,16 @@ WeaveVM Archiver is the ideal choice if you want to:
 ## Build & Run
 
 ```bash
-git clone https://github.com/weaveVM/wvm-archiver.git
+git clone https://github.com/weaveVM/substrate-archiver.git
 
-cd wvm-archiver
+cd substrate-archiver
 
 cargo shuttle run
 ```
 
 ### Prerequisites & Dependencies
 
-While a WeaveVM Archiver node can run without web2 component dependencies, this node implementation uses [planetscale](https://planetscale.com) for cloud indexing (indexing target network block ID to WVM archive TXID) and [shuttle.rs](https://shuttle.rs) for backend hosting. Check [.env.example](./env.example) to set up your environment variables.
+While a WeaveVM Substrate node can run without web2 component dependencies, this node implementation uses [planetscale](https://planetscale.com) for cloud indexing (indexing target network block ID to WVM archive TXID) and [shuttle.rs](https://shuttle.rs) for backend hosting. Check [.env.example](./env.example) to set up your environment variables.
 
 ```js
 archiver_pk="" // WeaveVM archiver PK
@@ -64,45 +64,19 @@ backfill thread: backfill_start_block -> start_block
 live sync thread: start_block -> network's live blockheight
 ```
 
-### RPC Proxy and Caching
-
-You can use [eRPC](https://github.com/erpc/erpc) to cache, load-balance and failover between as many RPC endpoints and use eRPC's proxy URL in each network's config for WeaveVM. This will increase performance and resiliency and reduce RPC usage cost while fetching network's block data via WeaveVM.
-
-```bash
-# modify erpc.yaml
-cp erpc.yaml.dist erpc.yaml
-code erpc.yaml
-
-# run docker-compose
-docker-compose up -d
-```
-
-Finally, you can set eRPC's proxy URL in each relative network config.
-
-```optimism.json
-{
-    "name": "Optimism",
-    "network_chain_id": 10,
-    "network_rpc": "http://erpc:4000/main/evm/10",
-    ...
-}
-```
-
 ## How it works
 
-The WeaveVM Archiver node operates as follows:
+The WeaveVM Substrate node operates as follows:
 
-1. It starts downloading the target EVM network block data from the RPC you provide in the network config file.
+1. It starts downloading the target substrate network block data from the RPC you provide in the network config file.
 2. The node begins pulling blocks from the `start_block` defined in the network's config file.
 3. The block data is then serialized in [borsh](https://borsh.io) format and compressed using Brotli.
 4. The serialized-compressed data is pushed to WeaveVM as calldata transaction from the `archiver_address` & `backfill_address` to the `archive_pool_address`.
-5. Simultaneously, the resulting TXID from pushing data to WeaveVM and the archived EVM block ID are indexed in the cloud for faster data retrieval.
+5. Simultaneously, the resulting TXID from pushing data to WeaveVM and the archived substrate block ID are indexed in the cloud for faster data retrieval.
 
 ## Server Methods
 
 As mentioned, PlanetScale is used for cloud indexing, which allows a WeaveVM Archiver node to expose its WeaveVM data as a RESTful API.
-
-#### Node instance endpoint: https://metis.wvm.network
 
 ### WeaveVM Archiver node instance info
 
@@ -125,7 +99,6 @@ pub struct InfoServerResponse {
     backfill_address: String,
     backfill_balance: U256,
     network_name: String,
-    network_chain_id: u32,
     network_rpc: String,
 }
 ```
@@ -142,13 +115,13 @@ curl -X GET https://the_network.wvm.network/v1/all-networks-info
 Vec<Network>
 ```
 
-### Retrieve the WVM archive TXID for a given EVM block ID
+### Retrieve the WVM archive TXID for a given substrate block ID
 
 ```bash
 curl -X GET https://the_network.wvm.network/v1/block/$BLOCK_ID
 ```
 
-### Decode the WVM archived block data for a given EVM block ID (return original block data in JSON format)
+### Decode the WVM archived block data for a given substrate block ID (return original block data in JSON format)
 
 ```bash
 curl -X GET https://the_network.wvm.network/v1/block/raw/$BLOCK_ID
