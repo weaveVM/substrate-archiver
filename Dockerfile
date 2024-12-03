@@ -4,4 +4,4 @@ COPY ./ ./
 
 RUN cargo build --release
 
-CMD ["./target/release/wvm-archiver"]
+CMD ["./target/release/subsrate-archiver"]

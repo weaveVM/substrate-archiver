@@ -26,9 +26,8 @@ pub async fn archive(block_number: Option<u64>, is_backfill: bool) -> Result<Str
         assert!(block_number.unwrap() < network.start_block)
     }
     // fetch block
-    let block_data = by_number(block_to_archive).await.unwrap();
+    let block_data_json = by_number(block_to_archive).await.unwrap();
     // serialize response into Block struct
-    let block_data_json = serde_json::json!(block_data.as_ref().unwrap());
     let block_data_struct = Block::load_block_from_value(block_data_json).unwrap();
     // borsh serialize the struct
     let borsh_res = Block::borsh_ser(&block_data_struct);
@@ -47,7 +46,7 @@ pub async fn archive(block_number: Option<u64>, is_backfill: bool) -> Result<Str
 pub async fn sprint_blocks_archiving(is_backfill: bool) {
     let network = Network::config();
     let block_time = network.block_time;
-    let mut current_block_number = get_current_block_number().await.as_u64();
+    let mut current_block_number = get_current_block_number().await;
     // it defaults to network.start_block or env.backfill_start_block
     // based on is_backfill if planestcale fails
     let mut start_block = ps_get_latest_block_id(is_backfill).await;
@@ -56,15 +55,15 @@ pub async fn sprint_blocks_archiving(is_backfill: bool) {
         if start_block < current_block_number - 1 {
             println!("\n{}", "#".repeat(100));
             println!(
-                "\nARCHIVING BLOCK #{} of Network {} -- ChainId: {} -- IS_BACKFILL: {}\n",
-                start_block, network.name, network.network_chain_id, is_backfill
+                "\nARCHIVING BLOCK #{} of Network {} -- IS_BACKFILL: {}\n",
+                start_block, network.name, is_backfill
             );
             let archive_txid = archive(Some(start_block), is_backfill).await.unwrap();
             let _ = ps_archive_block(&start_block, &archive_txid, is_backfill).await;
             start_block += 1;
             println!("\n{}", "#".repeat(100));
         } else {
-            current_block_number = get_current_block_number().await.as_u64();
+            current_block_number = get_current_block_number().await;
             thread::sleep(Duration::from_secs(block_time as u64));
         }
     }

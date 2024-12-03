@@ -11,6 +11,7 @@ use {
     serde::{Deserialize, Serialize},
     serde_json::Value,
     std::{
+        collections::HashMap,
         convert::TryFrom,
         fs::File,
         io::{Read, Write},
@@ -20,7 +21,6 @@ use {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Network {
     pub name: String,
-    pub network_chain_id: u32,
     pub wvm_chain_id: u32,
     pub network_rpc: String,
     pub wvm_rpc: String,
@@ -62,35 +62,152 @@ impl Network {
 }
 
 #[derive(Debug, Deserialize, Serialize, BorshSerialize, BorshDeserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub struct Block {
-    pub base_fee_per_gas: Option<String>,         // "baseFeePerGas"
-    pub blob_gas_used: Option<String>,            // "blobGasUsed"
-    pub difficulty: Option<String>,               // "difficulty"
-    pub excess_blob_gas: Option<String>,          // "excessBlobGas"
-    pub extra_data: Option<String>,               // "extraData"
-    pub gas_limit: Option<String>,                // "gasLimit"
-    pub gas_used: Option<String>,                 // "gasUsed"
-    pub hash: Option<String>,                     // "hash"
-    pub logs_bloom: Option<String>,               // "logsBloom"
-    pub miner: Option<String>,                    // "miner"
-    pub mix_hash: Option<String>,                 // "mixHash"
-    pub nonce: Option<String>,                    // "nonce"
-    pub number: Option<String>,                   // "number"
-    pub parent_beacon_block_root: Option<String>, // "parentBeaconBlockRoot"
-    pub parent_hash: Option<String>,              // "parentHash"
-    pub receipts_root: Option<String>,            // "receiptsRoot"
-    pub seal_fields: Vec<String>,                 // "sealFields" as an array of strings
-    pub sha3_uncles: Option<String>,              // "sha3Uncles"
-    pub size: Option<String>,                     // "size"
-    pub state_root: Option<String>,               // "stateRoot"
-    pub timestamp: Option<String>,                // "timestamp"
-    pub total_difficulty: Option<String>,         // "totalDifficulty"
-    pub transactions: Vec<String>,                // "transactions" as an array of strings
+    pub number: String,
+    pub hash: String,
+    #[serde(rename = "parentHash")]
+    pub parent_hash: String,
+    #[serde(rename = "stateRoot")]
+    pub state_root: String,
+    #[serde(rename = "extrinsicsRoot")]
+    pub extrinsics_root: String,
+    #[serde(rename = "authorId")]
+    pub author_id: String,
+    pub logs: Vec<Log>,
+    #[serde(rename = "onInitialize")]
+    pub on_initialize: InitializeFinalize,
+    pub extrinsics: Vec<Extrinsic>,
+    #[serde(rename = "onFinalize")]
+    pub on_finalize: InitializeFinalize,
+    pub finalized: bool,
+}
+
+#[derive(Debug, Deserialize, Serialize, BorshSerialize, BorshDeserialize, PartialEq)]
+pub struct Log {
+    #[serde(rename = "type")]
+    pub log_type: String,
+    pub index: String,
+    pub value: Vec<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, BorshSerialize, BorshDeserialize, PartialEq)]
+pub struct InitializeFinalize {
+    pub events: Vec<Event>,
+}
+
+#[derive(Debug, Deserialize, Serialize, BorshSerialize, BorshDeserialize, PartialEq)]
+pub struct Extrinsic {
+    pub method: Method,
+    pub signature: Option<String>,
+    pub nonce: Option<String>,
+    pub args: String, // Just store as string
+    pub tip: Option<String>,
+    pub hash: String,
+    pub info: String, // Just store as string
+    pub era: Era,
+    pub events: Vec<Event>,
+    pub success: bool,
+    #[serde(rename = "paysFee")]
+    pub pays_fee: bool,
 }
 
 impl Block {
-    pub fn load_block_from_value(value: Value) -> Result<Block, serde_json::Error> {
+    pub fn load_block_from_value(mut value: Value) -> Result<Block, serde_json::Error> {
+        if let Some(extrinsics) = value.get_mut("extrinsics").and_then(|e| e.as_array_mut()) {
+            for extrinsic in extrinsics {
+                if let Some(obj) = extrinsic.as_object_mut() {
+                    if let Some(args) = obj.get("args") {
+                        obj.insert(
+                            "args".to_string(),
+                            Value::String(serde_json::to_string(args)?),
+                        );
+                    }
+                    if let Some(info) = obj.get("info") {
+                        obj.insert(
+                            "info".to_string(),
+                            Value::String(serde_json::to_string(info)?),
+                        );
+                    }
+                    if let Some(events) = obj.get_mut("events").and_then(|e| e.as_array_mut()) {
+                        for event in events {
+                            if let Some(data) = event.get_mut("data") {
+                                // Normalize data into Borsh-compatible formats
+                                match data {
+                                    Value::Array(arr) => {
+                                        let normalized: Vec<String> = arr
+                                            .iter()
+                                            .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                                            .collect();
+                                        *data = serde_json::to_value(normalized).unwrap();
+                                    }
+                                    Value::Object(_) => {
+                                        // Convert objects to a string for now
+                                        *data = Value::String(serde_json::to_string(data)?);
+                                    }
+                                    _ => {} // Other formats are already compatible
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        serde_json::from_value(value)
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, BorshSerialize, BorshDeserialize, PartialEq)]
+pub struct JsonMap {
+    #[serde(flatten)]
+    pub data: HashMap<String, String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, BorshSerialize, BorshDeserialize, PartialEq)]
+pub struct Method {
+    pub pallet: String,
+    pub method: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, BorshSerialize, BorshDeserialize, PartialEq)]
+pub struct Era {
+    #[serde(rename = "immortalEra")]
+    pub immortal_era: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, BorshSerialize, BorshDeserialize, PartialEq)]
+pub struct EventData {
+    pub weight: Weight, // Not optional anymore
+    pub class: String,
+    #[serde(rename = "paysFee")]
+    pub pays_fee: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, BorshSerialize, BorshDeserialize, PartialEq)]
+#[serde(untagged)]
+pub enum DataValue {
+    EventData(EventData),
+    Str(String),
+    Array(Vec<String>),
+    Numeric(u64), // If there's a chance for numeric values
+}
+
+#[derive(Debug, Deserialize, Serialize, BorshSerialize, BorshDeserialize, PartialEq)]
+pub struct Event {
+    pub method: Method,
+    #[serde(default)]
+    pub data: Vec<DataValue>,
+}
+
+#[derive(Debug, Deserialize, Serialize, BorshSerialize, BorshDeserialize, PartialEq)]
+pub struct Weight {
+    #[serde(rename = "refTime")]
+    pub ref_time: Option<String>,
+    #[serde(rename = "proofSize")]
+    pub proof_size: Option<String>,
+}
+
+impl Block {
+    pub fn load_block_from_value1(value: Value) -> Result<Block, serde_json::Error> {
         serde_json::from_value::<Block>(value)
     }
     pub fn brotli_compress(input: &[u8]) -> Vec<u8> {
@@ -145,7 +262,6 @@ pub struct InfoServerResponse {
     backfill_address: String,
     backfill_balance: U256,
     network_name: String,
-    network_chain_id: u32,
     network_rpc: String,
 }
 
@@ -164,7 +280,7 @@ impl InfoServerResponse {
         let backfill_balance = Some(backfill_balance).unwrap_or("0".into());
         // blocks stats
         let total_archived_blocks = ps_get_archived_blocks_count().await;
-        let current_live_block = get_current_block_number().await.as_u64();
+        let current_live_block = get_current_block_number().await;
         let blocks_behind_live_blockheight = current_live_block - last_livesync_block.unwrap_or(0);
 
         let instance: InfoServerResponse = InfoServerResponse {
@@ -180,7 +296,6 @@ impl InfoServerResponse {
             archiver_address: network.archiver_address,
             backfill_address: network.backfill_address,
             network_name: network.name,
-            network_chain_id: network.network_chain_id,
             network_rpc: network.network_rpc,
         };
         instance

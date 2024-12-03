@@ -1,6 +1,5 @@
 {
     "name": "$YOUR_NETWORK_NAME",
-    "network_chain_id": 1, // your network ID
     "wvm_chain_id": 9496,
     "network_rpc": "https://", // your network public RPC URL
     "wvm_rpc": "https://testnet-rpc.wvm.dev",
