@@ -4,7 +4,7 @@
     "network_rpc": "https://explorer-api-sidecar.mainnet.stages.humanode.io",
     "wvm_rpc": "https://testnet-rpc.wvm.dev",
     "block_time": 6.0,
-    "start_block": 10511759,
+    "start_block": 10583106,
     "archiver_address": "0xfF67529362D40fB204bD71Dfa636f572f0090C64",
     "backfill_address": "0x0d4F524EF768266FcFb51EE6879fC4Faf74f62Ee",
     "archive_pool_address": "0x0000000000000000000000000000000000000000"

@@ -1,8 +1,9 @@
 use {
     crate::utils::{
         all_networks::get_all_networks_metadata,
+        block_type::Block,
         planetscale::{ps_get_archived_block_txid, ps_get_blocks_extremes},
-        schema::{Block, InfoServerResponse},
+        schema::InfoServerResponse,
         transaction::decode_wvm_tx_data,
     },
     axum::{extract::Path, response::Json},

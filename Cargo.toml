@@ -1,6 +1,6 @@
 [package]
 name = "substrate-archiver"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "EL data pipeline for WeaveVM-Substrate data"
 authors = ["charmful0x <rani@decent.land>"]

@@ -1,8 +1,5 @@
 use {
-    crate::utils::{
-        env_var::get_env_var,
-        schema::{Block, Network},
-    },
+    crate::utils::{block_type::Block, env_var::get_env_var, schema::Network},
     ethers::{prelude::*, types::H256, utils, utils::hex},
     ethers_providers::{Http, Provider},
     std::str::FromStr,

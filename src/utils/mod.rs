@@ -1,5 +1,6 @@
 pub mod all_networks;
 pub mod archive_block;
+pub mod block_type;
 pub mod env_var;
 pub mod get_block;
 pub mod planetscale;

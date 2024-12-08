@@ -1,9 +1,10 @@
 use {
     crate::utils::{
+        block_type::Block,
         env_var::get_env_var,
         get_block::{by_number, get_current_block_number},
         planetscale::{ps_archive_block, ps_get_latest_block_id},
-        schema::{Block, Network},
+        schema::Network,
         transaction::{send_wvm_calldata, send_wvm_calldata_backfill},
     },
     anyhow::Error,
@@ -27,8 +28,9 @@ pub async fn archive(block_number: Option<u64>, is_backfill: bool) -> Result<Str
     }
     // fetch block
     let block_data_json = by_number(block_to_archive).await.unwrap();
+    let block_data_str = serde_json::to_string(&block_data_json).unwrap();
     // serialize response into Block struct
-    let block_data_struct = Block::load_block_from_value(block_data_json).unwrap();
+    let block_data_struct = Block::new(block_data_str);
     // borsh serialize the struct
     let borsh_res = Block::borsh_ser(&block_data_struct);
     // brotli compress the borsh serialized block
