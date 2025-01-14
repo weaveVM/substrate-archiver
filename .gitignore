@@ -1,6 +1,7 @@
 /target
 
 .env
-Cargo.lock
 
 Secrets*.toml
+.shuttle.shuttle*
+.shuttle

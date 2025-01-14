@@ -1,5 +1,2 @@
-name = "substrate-archiver"
-
-assets = [
-    ".env"
-]
+[build]
+assets = ["networks/*"]
